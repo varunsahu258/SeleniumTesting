@@ -53,7 +53,6 @@ def driver():
 
     yield driver
 
-    time.sleep(3)        # pause at the end so you can see the final state
     driver.quit()
 
 
