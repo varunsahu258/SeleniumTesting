@@ -1,13 +1,29 @@
 """
 conftest.py — Shared Pytest fixtures for the entire test suite.
-Provides a headless Chrome WebDriver instance with sensible defaults.
+Provides a visible Chrome WebDriver instance with slowed-down actions for demo purposes.
 """
 
+import time
 import pytest
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
+
+# ── Slow-motion patch ────────────────────────────────────────────────────────
+original_click = webdriver.remote.webelement.WebElement.click
+original_send_keys = webdriver.remote.webelement.WebElement.send_keys
+
+def slow_click(self):
+    original_click(self)
+    time.sleep(1.5)        # pause after every click
+
+def slow_send_keys(self, *args):
+    original_send_keys(self, *args)
+    time.sleep(1.5)        # pause after every keystroke
+
+webdriver.remote.webelement.WebElement.click = slow_click
+webdriver.remote.webelement.WebElement.send_keys = slow_send_keys
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def pytest_configure(config):
@@ -20,24 +36,24 @@ def pytest_configure(config):
 def driver():
     """
     Yields a configured Chrome WebDriver for each test function.
-    Uses headless mode so tests run in CI/CD without a display.
+    Runs in visual (headed) mode so you can watch every action.
     Quits the driver after each test automatically.
     """
     chrome_options = Options()
-    chrome_options.add_argument("--headless")          # No GUI
-    chrome_options.add_argument("--no-sandbox")         # Required in some Linux envs
+    # chrome_options.add_argument("--headless")       # commented out = visual mode
+    chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-extensions")
 
-    # ChromeDriver must be on PATH (or pass executable_path via Service)
     driver = webdriver.Chrome(options=chrome_options)
     driver.implicitly_wait(10)   # Global implicit wait — 10 seconds
     driver.maximize_window()
 
     yield driver
-    time.sleep(3)
+
+    time.sleep(3)        # pause at the end so you can see the final state
     driver.quit()
 
 
